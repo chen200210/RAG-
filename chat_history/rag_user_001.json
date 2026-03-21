@@ -1,0 +1,557 @@
+[
+  {
+    "type": "human",
+    "data": {
+      "content": "阿尔吉侬是什么",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "阿尔吉侬是一只老鼠，被选中接受一种能提升智力的手术，手术后其智力顺利突破了实验室测定的智商标准；后来其智力开始恶化并最终死亡，被放入小小的棺材埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "e6034a4b-a65e-4bc3-943f-25df18d744ee",
+        "token_usage": {
+          "input_tokens": 491,
+          "output_tokens": 60,
+          "total_tokens": 551,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0f48-bdd9-75a3-967a-33a8f4fc2fb0-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "阿尔吉侬是什么",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "阿尔吉侬是一只老鼠，被选中接受一种能提升智力的手术，手术后其智力顺利突破了实验室测定的智商标准；后来其智力开始恶化并最终死亡，被放入小小的棺材埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "4b15bcfc-0562-4e62-83f2-bb51b39fbe90",
+        "token_usage": {
+          "input_tokens": 565,
+          "output_tokens": 60,
+          "total_tokens": 625,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0f4a-2764-7da1-bbee-acb1989211b5-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "阿尔吉侬是什么",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "阿尔吉侬是一只老鼠，被选中接受一种能提升智力的手术，手术后其智力顺利突破了实验室测定的智商标准；后来其智力开始恶化并最终死亡，被放入小小的棺材埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "23d4bb2e-4a29-48c3-b19a-77c52b8fb3d0",
+        "token_usage": {
+          "input_tokens": 639,
+          "output_tokens": 60,
+          "total_tokens": 699,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0f4a-3fc6-7262-a1e2-184812c8000e-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "阿尔吉侬是什么",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "阿尔吉侬是一只老鼠，被选中接受一种能提升智力的手术，手术后其智力顺利突破了实验室测定的智商标准；后来其智力开始恶化并最终死亡，被放入小小的棺材埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "376ab799-4ed3-4fe3-8367-eab0095578aa",
+        "token_usage": {
+          "input_tokens": 713,
+          "output_tokens": 60,
+          "total_tokens": 773,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0f4c-5ec8-79b2-89dc-34381bb8f2cc-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "阿尔吉侬是什么",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "阿尔吉侬是一只老鼠，被选中接受一种能提升智力的手术，手术后其智力顺利突破了实验室测定的智商标准；后来其智力开始恶化并最终死亡，被放入小小的棺材埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "ae3053f8-648f-44cb-b95f-f9db9d5aaaf5",
+        "token_usage": {
+          "input_tokens": 787,
+          "output_tokens": 60,
+          "total_tokens": 847,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0f4c-7ea1-76f0-a1d5-80a466dcdcd0-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "阿尔吉侬是什么",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "阿尔吉侬是一只老鼠，被选中接受一种能提升智力的手术，手术后其智力顺利突破了实验室测定的智商标准；后来其智力开始恶化并最终死亡，被放入小小的棺材埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "2c708ba9-6a06-444f-bf2d-bc094452e496",
+        "token_usage": {
+          "input_tokens": 861,
+          "output_tokens": 60,
+          "total_tokens": 921,
+          "prompt_tokens_details": {
+            "cached_tokens": 384
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0f4f-2a98-7600-8939-74e68e248d4e-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "阿尔吉侬是什么",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "阿尔吉侬是一只老鼠，被选中接受一种能提升智力的手术，手术后其智力顺利突破了实验室测定的智商标准；后来其智力开始恶化并最终死亡，被放入小小的棺材埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "6f572eb4-b51e-4689-b2f6-0097a582b465",
+        "token_usage": {
+          "input_tokens": 935,
+          "output_tokens": 60,
+          "total_tokens": 995,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0f4f-b943-72e2-90ae-c4bdeb421ee1-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "阿尔吉侬是？",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "阿尔吉侬是一只老鼠，被选中接受一种能提升智力的手术，手术后其智力顺利突破了实验室测定的智商标准；后来其智力开始恶化并最终死亡，被放入小小的棺材埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "5c007b03-6c95-49de-8c29-dd190d248073",
+        "token_usage": {
+          "input_tokens": 1010,
+          "output_tokens": 60,
+          "total_tokens": 1070,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0f52-0af1-7043-a048-fd01322d426e-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "阿尔吉侬的结局？",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "阿尔吉侬的结局是智力恶化后死亡，随后被放入小小的棺材，埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "5bbd8809-39c9-4250-bad0-ebcb48667592",
+        "token_usage": {
+          "input_tokens": 1086,
+          "output_tokens": 33,
+          "total_tokens": 1119,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0f54-4039-7541-a1da-63a9b9cf5e0c-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "阿尔吉侬的结局？",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "阿尔吉侬的结局是智力恶化后死亡，随后被放入小小的棺材，埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "b29145e6-c2a4-4862-9c68-0115c66089c8",
+        "token_usage": {
+          "input_tokens": 1135,
+          "output_tokens": 33,
+          "total_tokens": 1168,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0f55-437d-7b02-8b94-9e8d0fea757a-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "阿尔吉侬的结局？",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "阿尔吉侬的结局是智力恶化后死亡，随后被放入小小的棺材，埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "700806ef-3586-45e5-a09e-298553e4821c",
+        "token_usage": {
+          "input_tokens": 1184,
+          "output_tokens": 33,
+          "total_tokens": 1217,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0f56-9fb6-7840-a2e3-10cd9bc323aa-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "阿尔吉侬的结局是",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "阿尔吉侬的结局是智力恶化后死亡，随后被放入小小的棺材，埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "819396ef-0d2e-4288-bf39-04a4e23ec87a",
+        "token_usage": {
+          "input_tokens": 1233,
+          "output_tokens": 33,
+          "total_tokens": 1266,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0f5b-0d27-7a53-bd4c-ddb01a6f32a3-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "阿尔吉侬是",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "阿尔吉侬是一只老鼠，被选中接受一种能提升智力的手术，手术后其智力顺利突破了实验室测定的智商标准；后来其智力开始恶化并最终死亡，被放入小小的棺材埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "a6c5f6cf-21b2-4d0c-9ce2-312b7a48e344",
+        "token_usage": {
+          "input_tokens": 1280,
+          "output_tokens": 60,
+          "total_tokens": 1340,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0f5b-bb1e-72b3-9b6b-861c081b9809-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "阿尔吉侬是？",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "阿尔吉侬是一只老鼠，被选中接受一种能提升智力的手术，手术后其智力顺利突破了实验室测定的智商标准；后来其智力开始恶化并最终死亡，被放入小小的棺材埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "b48410e3-7cbf-43ed-b011-4807e2b40f03",
+        "token_usage": {
+          "input_tokens": 1355,
+          "output_tokens": 60,
+          "total_tokens": 1415,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0f5d-5469-7f32-82c7-fa124ce9f7bf-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "阿尔吉侬的妻子叫什么",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "知识库中未记载相关内容。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "be206e46-469d-4f7c-b196-1e8e49b758be",
+        "token_usage": {
+          "input_tokens": 1431,
+          "output_tokens": 7,
+          "total_tokens": 1438,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0f77-6b2f-7840-b108-e21c6a864c96-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  }
+]

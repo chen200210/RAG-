@@ -1,0 +1,40 @@
+0:01:38 Tab1 FinishNav67
+0:01:38 Tab1 PageLoad
+0:01:38 Tab1 PageLoad
+0:01:39 Tab1 StartNav68 #renderer-script #link
+0:01:39 Tab1 FinishNav68
+0:01:39 Tab1 StartNav69 #renderer-script #auto_subframe
+0:01:39 Tab1 FinishNav69
+0:01:39 Tab1 PageLoad
+0:01:40 Tab1 StartNav70 #renderer-script #auto_subframe
+0:01:40 Tab1 FinishNav70
+0:01:40 Tab1 PageLoad
+0:01:41 Tab1 StartNav71 #renderer-script #auto_subframe
+0:01:41 Tab1 FinishNav71
+0:01:41 Tab1 PageLoad
+0:02:10 Tab2 StartNav72 #ntp #auto_toplevel
+0:02:10 Browser2 Insert active Tab2 at 0
+0:02:10 Tab2 FinishNav72
+0:02:10 Tab2 StartNav73 #renderer-script #auto_subframe
+0:02:10 Tab2 FinishNav73
+0:02:10 Tab2 PageLoad
+0:02:10 Tab2 PageLoad #ntp
+0:02:11 Tab2 StartNav74 #renderer-script #auto_subframe
+0:02:11 Tab2 FinishNav74
+0:02:11 Tab2 PageLoad
+0:02:21 Tab3 StartNav75 #ntp #auto_toplevel
+0:02:21 Browser3 Insert active Tab3 at 0
+0:02:22 Tab3 FinishNav75
+0:02:22 Tab3 StartNav76 #renderer-script #auto_subframe
+0:02:22 Tab3 FinishNav76
+0:02:22 Tab3 PageLoad
+0:02:22 Tab3 PageLoad #ntp
+0:02:22 Tab3 StartNav77 #renderer-script #auto_subframe
+0:02:22 Tab3 FinishNav77
+0:02:22 Tab3 PageLoad
+0:02:25 Browser3 Close Tab3 at 0
+0:02:25 Widget Closed: BrowserWidget
+0:02:46 Widget Closed: StatusBubble
+0:02:46 Browser2 Close Tab2 at 0
+0:02:46 Widget Closed: BrowserWidget
+0:02:47 Browser1 Close Tab1 at 0
