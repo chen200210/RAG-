@@ -86,19 +86,21 @@ def _normalize_sources(source_docs):
     normalized = []
     for doc in (source_docs or []):
         if isinstance(doc, dict):
-            normalized.append(
-                {
-                    "page_content": doc.get("page_content", ""),
-                    "metadata": doc.get("metadata", {}) or {},
-                }
-            )
+            metadata = doc.get("metadata", {}) or {}
+            score = doc.get("relevance_score")
+            if score is None:
+                score = metadata.get("relevance_score")
+            metadata = dict(metadata)
+            metadata["relevance_score"] = score
+            normalized.append({"page_content": doc.get("page_content", ""), "metadata": metadata})
         else:
-            normalized.append(
-                {
-                    "page_content": getattr(doc, "page_content", "") or "",
-                    "metadata": getattr(doc, "metadata", {}) or {},
-                }
-            )
+            metadata = getattr(doc, "metadata", {}) or {}
+            score = getattr(doc, "relevance_score", None)
+            if score is None:
+                score = metadata.get("relevance_score")
+            metadata = dict(metadata)
+            metadata["relevance_score"] = score
+            normalized.append({"page_content": getattr(doc, "page_content", "") or "", "metadata": metadata})
     return normalized
 
 def _build_citation_to_doc_map(source_docs):
@@ -142,6 +144,14 @@ for message in st.session_state.messages:
                 for i, doc in enumerate(_normalize_sources(message["sources"])):
                     source_name = doc["metadata"].get('source', '未知')
                     st.caption(f"**Context-{i+1}** (来源: {source_name})")
+                    score = doc["metadata"].get("relevance_score")
+                    if score is not None:
+                        try:
+                            st.markdown(f":blue[得分: {float(score):.2f}]")
+                        except Exception:
+                            st.markdown(":blue[得分: N/A]")
+                    else:
+                        st.markdown(":blue[得分: N/A]")
                     st.text(doc["page_content"])
 # --- 6. 聊天输入与逻辑 ---
 if prompt := st.chat_input("请输入您的问题...", key="rag_chat_input"):
@@ -176,6 +186,17 @@ if prompt := st.chat_input("请输入您的问题...", key="rag_chat_input"):
                     for i, doc in enumerate(normalized_sources):
                         src_name = doc["metadata"].get('source', '本地文档')
                         st.info(f"**Context-{i+1}** 来自 《{src_name}》:")
+                        if use_rerank:
+                            score = doc["metadata"].get("relevance_score")
+                            if score is not None:
+                                try:
+                                    st.markdown(f":blue[得分: {float(score):.2f}]")
+                                except Exception:
+                                    st.markdown(":blue[得分: N/A]")
+                            else:
+                                st.markdown(":blue[得分: N/A]")
+                        else:
+                            st.markdown("得分: N/A")
                         st.caption(doc["page_content"])
             
             # 3. 🌟 C. 存入历史记录 (注意：要存入 sources 供刷新后渲染)

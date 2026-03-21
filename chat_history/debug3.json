@@ -1,0 +1,39 @@
+[
+  {
+    "type": "human",
+    "data": {
+      "content": "《献给阿尔吉侬的花束》最初发表于哪本杂志？",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "《献给阿尔吉侬的花束》最初为短篇小说，于1959年发表在《奇幻与科幻杂志》上 [来源: 1.txt-1]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "fae69842-602f-48a8-9581-cff3714f4a80",
+        "token_usage": {
+          "input_tokens": 336,
+          "output_tokens": 41,
+          "total_tokens": 377,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0fd7-f15a-7513-8e0d-51d7aba1457a-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  }
+]

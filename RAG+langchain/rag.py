@@ -4,6 +4,7 @@ from langchain_community.chat_models.tongyi import ChatTongyi
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from file_history_store import get_history
+import os
 
 class RagService(object):
 
@@ -21,6 +22,7 @@ class RagService(object):
         
         # 初始化链
         self.chain = self.get_chain()
+        self._auto_index_attempted = False
 
     # 🌟 修复：确保 format_docs 带有 self 参数，且定义在类级别
     def format_docs(self, docs):
@@ -42,6 +44,17 @@ class RagService(object):
         
         # 🌟 关键修复：先拿到初始文档并赋值给 final_docs
         initial_docs = retriever.invoke(question)
+        if not initial_docs:
+            vector_empty = False
+            try:
+                vector_empty = self.vector_store.vector_db._collection.count() == 0
+            except Exception:
+                vector_empty = False
+
+            if vector_empty or (not self._auto_index_attempted):
+                self._auto_index_attempted = True
+                self._try_auto_index()
+                initial_docs = retriever.invoke(question)
         final_docs = initial_docs  # 默认情况下，最终文档就是初始文档
         
         # 2. Rerank 逻辑
@@ -50,6 +63,44 @@ class RagService(object):
             reranker = DashScopeRerank(model="rerank-v1", top_n=3)
             # 如果走了这一步，final_docs 会被更新为精排后的版本
             final_docs = reranker.compress_documents(initial_docs, question)
+
+        for doc in final_docs or []:
+            meta = getattr(doc, "metadata", None) or {}
+            score = getattr(doc, "relevance_score", None)
+            if score is None:
+                score = meta.get("relevance_score")
+            if score is None:
+                score = meta.get("score")
+            if score is None:
+                score = meta.get("relevance")
+            if use_rerank:
+                try:
+                    score = float(score) if score is not None else None
+                except Exception:
+                    score = None
+            else:
+                score = None
+            meta["relevance_score"] = score
+            try:
+                doc.metadata = meta
+            except Exception:
+                pass
+            try:
+                setattr(doc, "relevance_score", score)
+            except Exception:
+                pass
+
+        if use_rerank and final_docs:
+            try:
+                final_docs = sorted(
+                    final_docs,
+                    key=lambda d: (
+                        getattr(d, "metadata", {}) or {}
+                    ).get("relevance_score", float("-inf")),
+                    reverse=True,
+                )
+            except Exception:
+                pass
             
         # 3. 运行 Chain (现在不论是否 Rerank，final_docs 都有值了)
         formatted_context = self.format_docs(final_docs)
@@ -59,10 +110,63 @@ class RagService(object):
             config={"configurable": {"session_id": config_dict["session_id"]}}
         )
 
+        answer_text = response.content
+        if ("[来源" not in answer_text) and ("来源:" not in answer_text) and final_docs:
+            cite_lines = []
+            for i, doc in enumerate(final_docs):
+                meta = getattr(doc, "metadata", {}) or {}
+                source = meta.get("source") or "未知文件"
+                chunk_id = meta.get("chunk_id")
+                cite_id = f"{source}-{chunk_id}" if chunk_id is not None else f"Context-{i+1}"
+                cite_lines.append(f"- [来源: {cite_id}]")
+            answer_text = f"{answer_text}\n\n参考来源：\n" + "\n".join(cite_lines)
+
         return {
-            "answer": response.content, 
+            "answer": answer_text,
             "context": final_docs 
         }
+
+    def _try_auto_index(self):
+        try:
+            from knowledge import KnowledgeBaseService
+        except Exception:
+            return
+
+        try:
+            kb = KnowledgeBaseService()
+        except Exception:
+            return
+
+        try:
+            force_reindex = False
+            try:
+                force_reindex = kb.chroma._collection.count() == 0
+            except Exception:
+                force_reindex = False
+
+            if not os.path.isdir(config.upload_dir):
+                return
+            for fname in os.listdir(config.upload_dir):
+                if not fname.lower().endswith(".txt"):
+                    continue
+                file_path = os.path.join(config.upload_dir, fname)
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        data = f.read()
+                except Exception:
+                    try:
+                        with open(file_path, "r", encoding="gbk") as f:
+                            data = f.read()
+                    except Exception:
+                        continue
+                if force_reindex:
+                    try:
+                        kb._remove_md5_by_filename(fname)
+                    except Exception:
+                        pass
+                kb.upload_by_str(data, fname)
+        except Exception:
+            return
 
     def get_chain(self):
         # 这里的 chain 不再需要 RunnablePassthrough.assign(context=...)
