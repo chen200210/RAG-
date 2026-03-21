@@ -3,14 +3,15 @@ import config_data as config
 
 class VectorStore:
     def __init__(self, embedding_function):
-        self.embedding_function = embedding_function
-        self.chroma = Chroma(
+        self.vector_db = Chroma(
             collection_name=config.collection_name,
-            embedding_function=self.embedding_function,
-            persist_directory=config.persist_directory
+            persist_directory=config.persist_directory,
+            embedding_function=embedding_function
         )
-    def get_retriever(self):
-        return self.chroma.as_retriever(search_kwargs={"k": config.similarity_threshold})
+
+    def get_retriever(self, **kwargs):
+        # 这里必须指向上面 __init__ 里定义的那个变量
+        return self.vector_db.as_retriever(**kwargs)
 if __name__ == "__main__":
     vector_store = VectorStore(config.embedding_function)
     retriever = vector_store.get_retriever()

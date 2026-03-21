@@ -1,11 +1,16 @@
+from pathlib import Path
+
 from langchain_community.embeddings import DashScopeEmbeddings
 
-upload_dir = "data/knowledge_base"
-md5_path = "./md5.text"
+_PROJECT_DIR = Path(__file__).resolve().parents[1]
+
+vector_db_path = str(_PROJECT_DIR / "chroma_db")
+upload_dir = str(_PROJECT_DIR / "data" / "knowledge_base")
+md5_path = str(_PROJECT_DIR / "md5.text")
 collection_name = "rag"
 embedding_function=DashScopeEmbeddings(model="text-embedding-v1")
 chat_model = "qwen-plus"
-persist_directory = "./chroma_db"
+persist_directory = str(_PROJECT_DIR / "chroma_db")
 chunk_size = 1000
 chunk_overlap = 100 
 separators=["\n\n", "\n", " ","!","?",".",",","，","。","!","？"]
