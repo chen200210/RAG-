@@ -74,8 +74,8 @@ class KnowledgeBaseService(object):
         """
         完整的上传逻辑示例
         """
-        # 1. 计算待处理数据的 MD5
-        current_md5 = self.get_md5_string(data)
+        chunk_salt = f"|chunk_size={config.chunk_size}|chunk_overlap={config.chunk_overlap}|separators={','.join(config.separators)}"
+        current_md5 = self.get_md5_string(data + chunk_salt)
         # 传入文件名进行精准校验
         if self.check_md5(filename, current_md5):
             print(f"内容未变，跳过: {filename}")

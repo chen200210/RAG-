@@ -1,4 +1,8 @@
 import config_data as config
+from typing import List, Optional, Tuple, Dict, Any
+
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.chat_models.tongyi import ChatTongyi
 from langchain_core.runnables import RunnablePassthrough
@@ -23,6 +27,7 @@ class RagService(object):
         # 初始化链
         self.chain = self.get_chain()
         self._auto_index_attempted = False
+        self._bm25_retriever = None
 
     # 🌟 修复：确保 format_docs 带有 self 参数，且定义在类级别
     def format_docs(self, docs):
@@ -38,12 +43,12 @@ class RagService(object):
         return "\n\n".join(formatted)
 
     def ask(self, question: str, config_dict: dict, use_rerank: bool = False):
-        # 1. 决定检索数量
-        k_value = 10 if use_rerank else 3
-        retriever = self.vector_store.get_retriever(search_kwargs={"k": k_value})
+        retrieve_k = 20 if use_rerank else 8
+        vector_retriever = self.vector_store.get_retriever(search_kwargs={"k": retrieve_k})
+        self._ensure_bm25_ready()
         
         # 🌟 关键修复：先拿到初始文档并赋值给 final_docs
-        initial_docs = retriever.invoke(question)
+        initial_docs = self._hybrid_retrieve(question, vector_retriever, retrieve_k)
         if not initial_docs:
             vector_empty = False
             try:
@@ -54,8 +59,12 @@ class RagService(object):
             if vector_empty or (not self._auto_index_attempted):
                 self._auto_index_attempted = True
                 self._try_auto_index()
-                initial_docs = retriever.invoke(question)
-        final_docs = initial_docs  # 默认情况下，最终文档就是初始文档
+                self._bm25_retriever = None
+                self._ensure_bm25_ready()
+                initial_docs = self._hybrid_retrieve(question, vector_retriever, retrieve_k)
+
+        initial_docs = (initial_docs or [])[:retrieve_k]
+        final_docs = initial_docs[:3]
         
         # 2. Rerank 逻辑
         if use_rerank:
@@ -125,6 +134,101 @@ class RagService(object):
             "answer": answer_text,
             "context": final_docs 
         }
+
+    def _ensure_bm25_ready(self) -> None:
+        if self._bm25_retriever is not None:
+            return
+        try:
+            from langchain_community.retrievers import BM25Retriever
+        except Exception:
+            return
+
+        if not os.path.isdir(config.upload_dir):
+            return
+
+        splitter = RecursiveCharacterTextSplitter(
+            separators=config.separators,
+            chunk_size=config.chunk_size,
+            chunk_overlap=config.chunk_overlap,
+        )
+
+        docs: List[Document] = []
+        for fname in os.listdir(config.upload_dir):
+            if not fname.lower().endswith(".txt"):
+                continue
+            file_path = os.path.join(config.upload_dir, fname)
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = f.read()
+            except Exception:
+                try:
+                    with open(file_path, "r", encoding="gbk") as f:
+                        data = f.read()
+                except Exception:
+                    continue
+
+            chunks = splitter.split_text(data)
+            for i, text in enumerate(chunks):
+                docs.append(
+                    Document(
+                        page_content=text,
+                        metadata={"source": fname, "chunk_id": i + 1},
+                    )
+                )
+
+        if not docs:
+            return
+
+        try:
+            bm25 = BM25Retriever.from_documents(docs)
+            self._bm25_retriever = bm25
+        except Exception:
+            self._bm25_retriever = None
+
+    def _hybrid_retrieve(self, question: str, vector_retriever, k: int) -> List[Document]:
+        vector_docs: List[Document] = []
+        try:
+            vector_docs = vector_retriever.invoke(question) or []
+        except Exception:
+            vector_docs = []
+
+        bm25_docs: List[Document] = []
+        if self._bm25_retriever is not None:
+            try:
+                self._bm25_retriever.k = k
+            except Exception:
+                pass
+            try:
+                bm25_docs = self._bm25_retriever.invoke(question) or []
+            except Exception:
+                bm25_docs = []
+
+        if not bm25_docs:
+            return vector_docs[:k]
+
+        weights = {"vector": 0.6, "bm25": 0.4}
+        scores: Dict[Tuple[str, Any, str], float] = {}
+        by_key: Dict[Tuple[str, Any, str], Document] = {}
+
+        def key_of(doc: Document) -> Tuple[str, Any, str]:
+            meta = getattr(doc, "metadata", {}) or {}
+            source = str(meta.get("source", ""))
+            chunk_id = meta.get("chunk_id")
+            text_prefix = (getattr(doc, "page_content", "") or "")[:80]
+            return (source, chunk_id, text_prefix)
+
+        for idx, doc in enumerate(vector_docs[:k]):
+            key = key_of(doc)
+            by_key[key] = doc
+            scores[key] = scores.get(key, 0.0) + weights["vector"] / (idx + 1)
+
+        for idx, doc in enumerate(bm25_docs[:k]):
+            key = key_of(doc)
+            by_key[key] = doc
+            scores[key] = scores.get(key, 0.0) + weights["bm25"] / (idx + 1)
+
+        merged = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
+        return [by_key[kv[0]] for kv in merged[:k]]
 
     def _try_auto_index(self):
         try:

@@ -11,8 +11,8 @@ collection_name = "rag"
 embedding_function=DashScopeEmbeddings(model="text-embedding-v1")
 chat_model = "qwen-plus"
 persist_directory = str(_PROJECT_DIR / "chroma_db")
-chunk_size = 1000
-chunk_overlap = 100 
+chunk_size = 800
+chunk_overlap = 150 
 separators=["\n\n", "\n", " ","!","?",".",",","，","。","!","？"]
 max_split_char_num = 1000
 similarity_threshold = 2

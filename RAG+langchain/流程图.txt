@@ -1,0 +1,54 @@
+┌──────────────────────────────┐
+│ Streamlit 前端 (pages/qa_web) │
+│ - chat_input 收集问题         │
+│ - 选择 use_rerank 开关         │
+│ - 渲染回答 + 悬浮引用 + 得分    │
+└───────────────┬──────────────┘
+                │ question, session_id, use_rerank
+                ▼
+┌──────────────────────────────┐
+│ RagService (rag.py)           │
+│ - RunnableWithMessageHistory  │
+│ - ask(): 检索 → (可选)Rerank →  │
+│        format_docs → prompt →  │
+│        LLM → answer + context  │
+└───────┬────────────────┬─────┘
+        │                │
+        │                │(history)
+        │                ▼
+        │      ┌───────────────────────┐
+        │      │ FileMessageHistory     │
+        │      │ (file_history_store.py)│
+        │      └───────────────────────┘
+        │
+        │(retrieval)
+        ▼
+┌──────────────────────────────┐
+│ Hybrid Retrieval（rag.py）     │
+│ 1) Vector Retriever           │
+│    - VectorStore → Chroma     │
+│ 2) BM25 Retriever             │
+│    - 从 upload_dir 重建索引    │
+│ 3) 融合排序（RRF风格加权）     │
+└───────────────┬──────────────┘
+                │ topK=20(开Rerank) / 8(不开)
+                ▼
+┌──────────────────────────────┐
+│ DashScopeRerank（可选）        │
+│ - 对 topK 片段精排             │
+│ - 取 Top3 → final_docs         │
+│ - 写入 relevance_score         │
+└───────────────┬──────────────┘
+                ▼
+┌──────────────────────────────┐
+│ Prompt + LLM（ChatTongyi）     │
+│ - system_prompt_template       │
+│ - context(带 [文件-片段ID] )    │
+│ - 输出 answer（含 [来源: ...]） │
+└───────────────┬──────────────┘
+                ▼
+┌──────────────────────────────┐
+│ Streamlit 渲染                 │
+│ - expander 展示 Top3 原文 + 得分│
+│ - 正则把 [来源: ...] 转成悬浮气泡│
+└──────────────────────────────┘
