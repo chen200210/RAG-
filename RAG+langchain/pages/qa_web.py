@@ -126,8 +126,16 @@ def _enrich_answer_with_tooltips(answer: str, source_docs):
         tooltip_text = (doc.get("page_content", "") or "").replace("\n", " ").strip()
         tooltip_text = tooltip_text[:800]
         tooltip_text = html.escape(tooltip_text, quote=True)
-        cite_id_html = html.escape(cite_id, quote=True)
-        return f'<span class="rag-cite" data-tooltip="{tooltip_text}">[来源: {cite_id_html}]</span>'
+        display_id = cite_id
+        if cite_id.startswith("Context-"):
+            meta = doc.get("metadata", {}) or {}
+            source = meta.get("source")
+            chunk_id = meta.get("chunk_id")
+            if source and (chunk_id is not None):
+                display_id = f"{source}-{chunk_id}"
+
+        display_id_html = html.escape(display_id, quote=True)
+        return f'<span class="rag-cite" data-tooltip="{tooltip_text}">[来源: {display_id_html}]</span>'
 
     return re.sub(r"`?\[来源:\s*([^\]]+)\]`?", repl, answer)
 

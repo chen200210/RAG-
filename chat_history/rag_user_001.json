@@ -2033,5 +2033,153 @@
       "invalid_tool_calls": [],
       "usage_metadata": null
     }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "那个动物怎么了",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "那个动物（阿尔吉侬）智力开始恶化并最终死亡，随后被放入小小的棺材埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "741492af-9d0e-4f88-839b-ae245d9630ed",
+        "token_usage": {
+          "input_tokens": 2951,
+          "output_tokens": 35,
+          "total_tokens": 2986,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0fda-e3a2-7012-82b2-7642f9c1f9bc-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "那个动物怎么了",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "那个动物（阿尔吉侬）智力开始恶化并最终死亡，随后被放入小小的棺材埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "075457d8-d90d-4f76-b7da-ea2909f7b7f2",
+        "token_usage": {
+          "input_tokens": 3000,
+          "output_tokens": 35,
+          "total_tokens": 3035,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0fdc-a34d-7920-816d-bf71046262eb-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "那个动物怎么了",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "那个动物（阿尔吉侬）智力开始恶化并最终死亡，随后被放入小小的棺材埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "fd68f6cb-90f1-4f51-9105-b1c6c5e6a9bf",
+        "token_usage": {
+          "input_tokens": 3047,
+          "output_tokens": 35,
+          "total_tokens": 3082,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d0fdd-0662-72e0-b49d-c5c59c0ef837-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  },
+  {
+    "type": "human",
+    "data": {
+      "content": "那个动物怎么了",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "那个动物（阿尔吉侬）智力开始恶化并最终死亡，随后被放入小小的棺材埋在查理的后院 [来源: Context-2]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "f07a91dd-a805-4469-9df5-c639af6e936a",
+        "token_usage": {
+          "input_tokens": 3098,
+          "output_tokens": 35,
+          "total_tokens": 3133,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d1a7b-eb84-7a42-a459-31a2560497d7-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
   }
 ]
