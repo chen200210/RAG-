@@ -44,6 +44,13 @@ def _load_traces(dir_path):
             pass
     return data
 
+def _load_single(path):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
 
 def _estimate_tokens(step):
     tu = step.get("token_usage") or {}
@@ -105,6 +112,59 @@ def analyze(traces):
         "bad_cases": bad_cases,
     }
 
+def _render_single_trace(trace):
+    tid = trace.get("trace_id")
+    q = trace.get("user_question")
+    rounds = trace.get("rounds")
+    passed = trace.get("passed")
+    steps = trace.get("steps") or []
+    print(f"trace_id: {tid}")
+    print(f"question: {q}")
+    print(f"rounds: {rounds}  passed: {passed}")
+    print("")
+    try:
+        from rich.console import Console
+        from rich.table import Table
+        console = Console()
+        table = Table(show_header=True, header_style="bold cyan")
+        table.add_column("#", justify="right")
+        table.add_column("Step")
+        table.add_column("Round", justify="right")
+        table.add_column("ms", justify="right")
+        table.add_column("Tokens", justify="right")
+        table.add_column("Output(summary)")
+        for i, s in enumerate(steps, 1):
+            name = s.get("name")
+            rnd = s.get("round")
+            ms = f"{float(s.get('duration_ms') or 0.0):.1f}"
+            tu = s.get("token_usage") or {}
+            tok = tu.get("total_tokens") or ( (tu.get("prompt_tokens") or 0)+(tu.get("completion_tokens") or 0) )
+            out = s.get("output") or {}
+            # 简要拼接关键字段
+            if name in ("Retriever", "Rerank"):
+                size = out.get("size")
+                srcs = out.get("sources") or []
+                snippet = f"size={size}, src={srcs[:1]}"
+            elif name == "Grader":
+                snippet = f"{out.get('verdict')} score={out.get('score')}"
+            elif name == "Rewriter":
+                snippet = f"new={out.get('new_query')}"
+            elif name == "Generator":
+                snippet = f"answer={str(out.get('answer'))[:60]}"
+            else:
+                snippet = str(out)[:60]
+            table.add_row(str(i), str(name), str(rnd), ms, str(tok), snippet)
+        console.print(table)
+    except Exception:
+        print("#\tStep\tRound\tms\tTokens\tOutput")
+        for i, s in enumerate(steps, 1):
+            name = s.get("name")
+            rnd = s.get("round")
+            ms = f"{float(s.get('duration_ms') or 0.0):.1f}"
+            tu = s.get("token_usage") or {}
+            tok = tu.get("total_tokens") or ( (tu.get("prompt_tokens") or 0)+(tu.get("completion_tokens") or 0) )
+            print(f"{i}\t{name}\t{rnd}\t{ms}\t{tok}\t...")  # 简略行
+
 
 def _render_table(step_stats, total_time_ms):
     try:
@@ -137,8 +197,20 @@ def _render_table(step_stats, total_time_ms):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", default=os.path.join("logs", "traces"))
+    ap.add_argument("--file", help="analyze a specific trace JSON file")
+    ap.add_argument("--id", dest="trace_id", help="only analyze traces with this trace_id")
     args = ap.parse_args()
+    if args.file:
+        tr = _load_single(args.file)
+        if not tr:
+            print("invalid file or cannot read")
+            return
+        _render_single_trace(tr)
+        return
+
     traces = _load_traces(args.dir)
+    if args.trace_id:
+        traces = [t for t in traces if t.get("trace_id") == args.trace_id]
     res = analyze(traces)
     if res.get("n", 0) == 0:
         print("no traces")

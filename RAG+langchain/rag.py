@@ -10,6 +10,7 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 from file_history_store import get_history
 import os
 from trace_manager import get_trace_manager, trace_step
+import re
 
 MAX_RETRIES = 3
 
@@ -47,7 +48,14 @@ class RagService(object):
         return "\n\n".join(formatted)
 
     def ask(self, question: str, config_dict: dict, use_rerank: bool = False) -> Iterator[Dict[str, Any]]:
-        retrieve_k = 20 if use_rerank else 8
+        # 路由判定：为简单问题走“快速通道”
+        route = self._route_query(question)
+        fast_path = bool(route.get("fast_path"))
+        reason = route.get("reason", "")
+        retries_cap = 1 if fast_path else MAX_RETRIES
+        effective_use_rerank = False if fast_path else use_rerank
+
+        retrieve_k = 20 if effective_use_rerank else 8
         vector_retriever = self.vector_store.get_retriever(search_kwargs={"k": retrieve_k})
         self._ensure_bm25_ready()
 
@@ -61,7 +69,13 @@ class RagService(object):
         tm = get_trace_manager()
         trace_id = tm.start_trace(original_question, {"use_rerank": use_rerank})
 
-        while attempt < MAX_RETRIES:
+        # 状态提示当前路径
+        if fast_path:
+            yield {"type": "status", "message": f"进入快速路径（不精排、最多1轮）：{reason}"}
+        else:
+            yield {"type": "status", "message": "进入深度分析路径（Hybrid + Rerank + 反思循环）"}
+
+        while attempt < retries_cap:
             yield {"type": "status", "message": f"正在检索候选片段（第 {attempt + 1}/{MAX_RETRIES} 轮）..."}
             yield {"type": "status", "message": f"检索查询: {current_query}"}
             self._current_round = attempt + 1
@@ -75,7 +89,8 @@ class RagService(object):
                 except Exception:
                     vector_empty = False
 
-                if vector_empty or (not self._auto_index_attempted):
+                # 仅在第一轮且库为空时才允许“索引自救”
+                if attempt == 0 and vector_empty and (not self._auto_index_attempted):
                     self._auto_index_attempted = True
                     yield {"type": "status", "message": "检测到检索结果为空，尝试自动同步本地知识库..."}
                     self._try_auto_index()
@@ -87,7 +102,7 @@ class RagService(object):
             rerank_input = initial_docs
             final_docs = rerank_input[:3]
 
-            if use_rerank and rerank_input:
+            if effective_use_rerank and rerank_input:
                 yield {"type": "status", "message": f"正在对 {len(rerank_input)} 个片段进行精排..."}
                 try:
                     final_docs = self._rerank(rerank_input, original_question, 3) or []
@@ -129,7 +144,7 @@ class RagService(object):
                 )
                 all_seen[key] = doc
 
-            if use_rerank and final_docs:
+            if effective_use_rerank and final_docs:
                 try:
                     final_docs = sorted(
                         final_docs,
@@ -154,7 +169,7 @@ class RagService(object):
 
             yield {"type": "status", "message": "检索质量评估: NO"}
             attempt += 1
-            if attempt >= MAX_RETRIES:
+            if attempt >= retries_cap:
                 break
 
             yield {"type": "status", "message": f"尝试优化搜索词重试第 {attempt + 1}/{MAX_RETRIES} 次..."}
@@ -229,7 +244,15 @@ class RagService(object):
             verdict = "YES" if "YES" in text else "NO"
             score = 1.0 if verdict == "YES" else 0.0
             reason = ""
-            return {"verdict": verdict, "score": score, "reason": reason}
+            usage = {}
+            try:
+                usage = getattr(out, "usage_metadata", None) or {}
+                if not usage:
+                    rm = getattr(out, "response_metadata", None) or {}
+                    usage = rm.get("token_usage") or rm.get("usage") or {}
+            except Exception:
+                usage = {}
+            return {"verdict": verdict, "score": score, "reason": reason, "usage_metadata": usage}
         except Exception:
             return {"verdict": "NO", "score": 0.0, "reason": "error"}
 
@@ -240,19 +263,43 @@ class RagService(object):
         output_fn=lambda text: {"new_query": text},
     )
     def _rewrite_question(self, original_question: str, current_query: str, context: str) -> str:
+        # 从原问题提取需保留的核心词（简单分词替代）
+        preserve_terms = re.findall(r"[\u4e00-\u9fa5A-Za-z0-9]+", original_question)[:5]
+        preserve_hint = "、".join(preserve_terms)
+
         rewriter_prompt = ChatPromptTemplate.from_messages(
             [
-                ("system", "把用户问题改写成更适合检索的查询，显式包含关键实体、时间、数值，只输出改写后的问题本身。"),
-                ("human", "原始问题：{original_question}\n当前查询：{current_query}\n已检索到的信息片段：\n{context}\n\n改写后的查询："),
+                ("system",
+                 "你是检索词改写器。"
+                 "输出要求：只输出三行，每行是'关键词组'，用空格分隔，不要句子、不要标点，每行≤5个关键词。\n"
+                 "例如：\n"
+                 "老刀 送信 目的\n"
+                 "幼儿园 赞助费 数额\n"
+                 "秦天 委托 报酬\n"
+                 "约束：必须保留这些核心实体，不得丢弃：{preserve}。如果已检索到部分信息，只补充缺失要点。"),
+                ("human",
+                 "原始问题：{original_question}\n"
+                 "当前查询：{current_query}\n"
+                 "已检索片段（摘要）：\n{context}\n"
+                 "请给出三行关键词组："),
             ]
         )
         try:
             out = (rewriter_prompt | self.control_llm).invoke(
-                {"original_question": original_question, "current_query": current_query, "context": context}
+                {
+                    "original_question": original_question,
+                    "current_query": current_query,
+                    "context": context[:300],
+                    "preserve": preserve_hint,
+                }
             )
-            text = getattr(out, "content", str(out)).strip()
-            text = text.replace("\n", " ").strip()
-            return text[:200]
+            text = (getattr(out, "content", str(out)) or "").strip()
+            # 只取前三行，拼成一行关键词，控制长度
+            lines = [ln.strip() for ln in text.splitlines() if ln.strip()][:3]
+            if not lines:
+                return ""
+            merged = " | ".join(lines)
+            return merged[:200]
         except Exception:
             return ""
 
@@ -381,6 +428,15 @@ class RagService(object):
                 for d in (res or [])[:5]
             ],
         },
+        token_usage_fn=lambda res: (
+            (lambda total_chars: {
+                "prompt_tokens": max(1, total_chars // 4),
+                "completion_tokens": 0,
+                "total_tokens": max(1, total_chars // 4),
+                "estimated": True,
+            })(sum(len(getattr(d, "page_content", "") or "") for d in (res or [])))
+            if isinstance(res, list) else {}
+        ),
     )
     def _rerank(self, docs: List[Document], question: str, top_n: int = 3) -> List[Document]:
         try:
@@ -401,6 +457,37 @@ class RagService(object):
             {"question": question, "context": context},
             config={"configurable": {"session_id": config_dict["session_id"]}},
         )
+
+    @trace_step(
+        name="Router",
+        round_from=lambda self, question: 1,
+        input_fn=lambda self, question: {"question": question[:120]},
+        output_fn=lambda res: {"fast_path": res.get("fast_path"), "reason": res.get("reason", "")[:120]},
+    )
+    def _route_query(self, question: str) -> Dict[str, Any]:
+        """
+        轻量意图路由：简单事实/追问 → fast_path
+        """
+        try:
+            prompt = ChatPromptTemplate.from_messages(
+                [
+                    ("system", "判断问题是否属于简单事实查询或基于已知上下文的追问。"
+                               "只输出 JSON：{'fast': true/false, 'reason': '...'}。"),
+                    ("human", "{q}"),
+                ]
+            )
+            out = (prompt | self.control_llm).invoke({"q": question})
+            text = getattr(out, "content", str(out)).strip()
+            fast = False
+            if any(kw in question for kw in ["是谁", "多少", "什么时候", "原因", "目的", "在哪", "定义", "结局"]):
+                fast = True
+            if len(question) <= 12:
+                fast = True
+            reason = "关键词命中快速通道" if fast else "需深度分析"
+            return {"fast_path": fast, "reason": reason}
+        except Exception:
+            # 失败时默认深度路径，保证稳态
+            return {"fast_path": False, "reason": "路由器异常，回退深度路径"}
     def _try_auto_index(self):
         try:
             from knowledge import KnowledgeBaseService
