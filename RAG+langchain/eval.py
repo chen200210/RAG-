@@ -73,7 +73,7 @@ def run_evaluation():
     for item in test_questions:
         # 调用你现有的 ask 方法
         # 注意：需要模拟一个 session_id
-        response = rag_service.ask(item["question"], {"session_id": "eval_test_001"})
+        response = rag_service.ask_sync(item["question"], {"session_id": "eval_test_001"})
         
         # 构造 Ragas 需要的数据格式
         results.append({

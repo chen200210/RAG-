@@ -1,0 +1,39 @@
+[
+  {
+    "type": "human",
+    "data": {
+      "content": "第一、二、三空间的人口数量分别是多少？",
+      "additional_kwargs": {},
+      "response_metadata": {},
+      "type": "human",
+      "name": null,
+      "id": null
+    }
+  },
+  {
+    "type": "ai",
+    "data": {
+      "content": "第一空间人口为五百万，第二空间人口为两千五百万，第三空间人口为五千万 [来源: 折叠北京.txt-8]。",
+      "additional_kwargs": {},
+      "response_metadata": {
+        "model_name": "qwen-plus",
+        "finish_reason": "stop",
+        "request_id": "75993192-6394-47d2-b1b8-bcf9db5775d6",
+        "token_usage": {
+          "input_tokens": 1804,
+          "output_tokens": 33,
+          "total_tokens": 1837,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        }
+      },
+      "type": "ai",
+      "name": null,
+      "id": "lc_run--019d1e2c-95c3-75d3-998c-b857302dba91-0",
+      "tool_calls": [],
+      "invalid_tool_calls": [],
+      "usage_metadata": null
+    }
+  }
+]

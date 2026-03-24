@@ -170,46 +170,47 @@ if prompt := st.chat_input("请输入您的问题...", key="rag_chat_input"):
 
     # 2. AI 响应容器
     with st.chat_message("assistant"):
-        with st.spinner("查阅文档并思考中..."):
-            # 调用后台
-            res = st.session_state.rag_service.ask(prompt, session_config, use_rerank=use_rerank)
-            
-            # 确保解析不出错
-            full_answer = ""
+        status_box = st.empty()
+        res_final = None
+
+        for event in st.session_state.rag_service.ask(prompt, session_config, use_rerank=use_rerank):
+            if isinstance(event, dict) and event.get("type") == "status":
+                status_box.info(event.get("message", ""))
+                continue
+            if isinstance(event, dict) and event.get("type") == "final":
+                res_final = event
+
+        status_box.empty()
+
+        full_answer = ""
+        source_docs = []
+        if isinstance(res_final, dict):
+            full_answer = res_final.get("answer", "")
+            source_docs = res_final.get("context", [])
+        else:
+            full_answer = "知识库中未记载相关内容。"
             source_docs = []
-            if isinstance(res, dict):
-                full_answer = res.get("answer", "")
-                source_docs = res.get("context", [])
-            else:
-                full_answer = str(res)
 
-            # 🌟 A. 渲染回答（把 [来源: ...] 替换成可悬浮的红色虚线引用）
-            enriched_html = _enrich_answer_with_tooltips(full_answer, source_docs)
-            st.markdown(enriched_html, unsafe_allow_html=True)
+        enriched_html = _enrich_answer_with_tooltips(full_answer, source_docs)
+        st.markdown(enriched_html, unsafe_allow_html=True)
 
-            # 🌟 B. 紧接着渲染原文卡片 (确保这几行在 assistant 消息框内)
-            normalized_sources = _normalize_sources(source_docs)
-            if normalized_sources:
-                with st.expander("🔍 查看参考原文", expanded=True):
-                    for i, doc in enumerate(normalized_sources):
-                        src_name = doc["metadata"].get('source', '本地文档')
-                        st.info(f"**Context-{i+1}** 来自 《{src_name}》:")
-                        if use_rerank:
-                            score = doc["metadata"].get("relevance_score")
-                            if score is not None:
-                                try:
-                                    st.markdown(f":blue[得分: {float(score):.2f}]")
-                                except Exception:
-                                    st.markdown(":blue[得分: N/A]")
-                            else:
+        normalized_sources = _normalize_sources(source_docs)
+        if normalized_sources:
+            with st.expander("🔍 查看参考原文", expanded=True):
+                for i, doc in enumerate(normalized_sources):
+                    src_name = doc["metadata"].get("source", "本地文档")
+                    st.info(f"**Context-{i+1}** 来自 《{src_name}》:")
+                    if use_rerank:
+                        score = doc["metadata"].get("relevance_score")
+                        if score is not None:
+                            try:
+                                st.markdown(f":blue[得分: {float(score):.2f}]")
+                            except Exception:
                                 st.markdown(":blue[得分: N/A]")
                         else:
-                            st.markdown("得分: N/A")
-                        st.caption(doc["page_content"])
-            
-            # 3. 🌟 C. 存入历史记录 (注意：要存入 sources 供刷新后渲染)
-            st.session_state.messages.append({
-                "role": "assistant", 
-                "content": enriched_html,
-                "sources": normalized_sources
-            })
+                            st.markdown(":blue[得分: N/A]")
+                    else:
+                        st.markdown("得分: N/A")
+                    st.caption(doc["page_content"])
+
+        st.session_state.messages.append({"role": "assistant", "content": enriched_html, "sources": normalized_sources})

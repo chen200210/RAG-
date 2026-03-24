@@ -1,5 +1,5 @@
 import config_data as config
-from typing import List, Optional, Tuple, Dict, Any
+from typing import List, Optional, Tuple, Dict, Any, Iterator
 
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -9,6 +9,9 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from file_history_store import get_history
 import os
+from trace_manager import get_trace_manager, trace_step
+
+MAX_RETRIES = 3
 
 class RagService(object):
 
@@ -18,6 +21,7 @@ class RagService(object):
         
         self.vector_store = VectorStore(config.embedding_function)
         self.llm = ChatTongyi(model=config.chat_model, temperature=0.1)
+        self.control_llm = ChatTongyi(model=config.chat_model, temperature=0.0)
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", config.system_prompt_template),
             MessagesPlaceholder(variable_name="history"),
@@ -42,87 +46,139 @@ class RagService(object):
             formatted.append(f"[{cite_id}]\n{getattr(doc, 'page_content', '')}")
         return "\n\n".join(formatted)
 
-    def ask(self, question: str, config_dict: dict, use_rerank: bool = False):
+    def ask(self, question: str, config_dict: dict, use_rerank: bool = False) -> Iterator[Dict[str, Any]]:
         retrieve_k = 20 if use_rerank else 8
         vector_retriever = self.vector_store.get_retriever(search_kwargs={"k": retrieve_k})
         self._ensure_bm25_ready()
-        
-        # 🌟 关键修复：先拿到初始文档并赋值给 final_docs
-        initial_docs = self._hybrid_retrieve(question, vector_retriever, retrieve_k)
-        if not initial_docs:
-            vector_empty = False
-            try:
-                vector_empty = self.vector_store.vector_db._collection.count() == 0
-            except Exception:
+
+        original_question = question
+        current_query = question
+        attempt = 0
+        passed = False
+        last_docs: List[Document] = []
+        best_docs: List[Document] = []
+        all_seen: Dict[Tuple[str, Any, str], Document] = {}
+        tm = get_trace_manager()
+        trace_id = tm.start_trace(original_question, {"use_rerank": use_rerank})
+
+        while attempt < MAX_RETRIES:
+            yield {"type": "status", "message": f"正在检索候选片段（第 {attempt + 1}/{MAX_RETRIES} 轮）..."}
+            yield {"type": "status", "message": f"检索查询: {current_query}"}
+            self._current_round = attempt + 1
+
+            initial_docs = self._hybrid_retrieve(current_query, vector_retriever, retrieve_k) or []
+
+            if not initial_docs:
                 vector_empty = False
-
-            if vector_empty or (not self._auto_index_attempted):
-                self._auto_index_attempted = True
-                self._try_auto_index()
-                self._bm25_retriever = None
-                self._ensure_bm25_ready()
-                initial_docs = self._hybrid_retrieve(question, vector_retriever, retrieve_k)
-
-        initial_docs = (initial_docs or [])[:retrieve_k]
-        final_docs = initial_docs[:3]
-        
-        # 2. Rerank 逻辑
-        if use_rerank:
-            from langchain_community.document_compressors.dashscope_rerank import DashScopeRerank
-            reranker = DashScopeRerank(model="rerank-v1", top_n=3)
-            # 如果走了这一步，final_docs 会被更新为精排后的版本
-            final_docs = reranker.compress_documents(initial_docs, question)
-
-        for doc in final_docs or []:
-            meta = getattr(doc, "metadata", None) or {}
-            score = getattr(doc, "relevance_score", None)
-            if score is None:
-                score = meta.get("relevance_score")
-            if score is None:
-                score = meta.get("score")
-            if score is None:
-                score = meta.get("relevance")
-            if use_rerank:
                 try:
-                    score = float(score) if score is not None else None
+                    vector_empty = self.vector_store.vector_db._collection.count() == 0
                 except Exception:
+                    vector_empty = False
+
+                if vector_empty or (not self._auto_index_attempted):
+                    self._auto_index_attempted = True
+                    yield {"type": "status", "message": "检测到检索结果为空，尝试自动同步本地知识库..."}
+                    self._try_auto_index()
+                    self._bm25_retriever = None
+                    self._ensure_bm25_ready()
+                    initial_docs = self._hybrid_retrieve(current_query, vector_retriever, retrieve_k) or []
+
+            initial_docs = initial_docs[:retrieve_k]
+            rerank_input = initial_docs
+            final_docs = rerank_input[:3]
+
+            if use_rerank and rerank_input:
+                yield {"type": "status", "message": f"正在对 {len(rerank_input)} 个片段进行精排..."}
+                try:
+                    final_docs = self._rerank(rerank_input, original_question, 3) or []
+                except Exception:
+                    final_docs = rerank_input[:3]
+
+            for idx, doc in enumerate(final_docs):
+                meta = getattr(doc, "metadata", None) or {}
+                score = getattr(doc, "relevance_score", None)
+                if score is None:
+                    score = meta.get("relevance_score")
+                if score is None:
+                    score = meta.get("score")
+                if score is None:
+                    score = meta.get("relevance")
+                if use_rerank:
+                    try:
+                        score = float(score) if score is not None else None
+                    except Exception:
+                        score = None
+                else:
                     score = None
-            else:
-                score = None
-            meta["relevance_score"] = score
-            try:
-                doc.metadata = meta
-            except Exception:
-                pass
-            try:
-                setattr(doc, "relevance_score", score)
-            except Exception:
-                pass
+                meta["relevance_score"] = score
+                meta["round"] = attempt + 1
+                meta["retrieval_query"] = current_query
+                try:
+                    doc.metadata = meta
+                except Exception:
+                    pass
+                try:
+                    setattr(doc, "relevance_score", score)
+                except Exception:
+                    pass
 
-        if use_rerank and final_docs:
-            try:
-                final_docs = sorted(
-                    final_docs,
-                    key=lambda d: (
-                        getattr(d, "metadata", {}) or {}
-                    ).get("relevance_score", float("-inf")),
-                    reverse=True,
+                key = (
+                    str(meta.get("source", "")),
+                    meta.get("chunk_id"),
+                    (getattr(doc, "page_content", "") or "")[:80],
                 )
-            except Exception:
-                pass
-            
-        # 3. 运行 Chain (现在不论是否 Rerank，final_docs 都有值了)
-        formatted_context = self.format_docs(final_docs)
-        
-        response = self.chain.invoke(
-            {"question": question, "context": formatted_context},
-            config={"configurable": {"session_id": config_dict["session_id"]}}
-        )
+                all_seen[key] = doc
 
-        answer_text = response.content
-        if ("[来源" not in answer_text) and ("来源:" not in answer_text) and final_docs:
+            if use_rerank and final_docs:
+                try:
+                    final_docs = sorted(
+                        final_docs,
+                        key=lambda d: (getattr(d, "metadata", {}) or {}).get("relevance_score", float("-inf")),
+                        reverse=True,
+                    )
+                except Exception:
+                    pass
+
+            last_docs = final_docs
+            if not best_docs and last_docs:
+                best_docs = last_docs
+
+            formatted_context = self.format_docs(last_docs)
+            yield {"type": "status", "message": "正在评估检索质量..."}
+            grade_res = self._grade_context(original_question, formatted_context)
+            verdict = (grade_res or {}).get("verdict", "").upper()
+            passed = verdict == "YES"
+            if passed:
+                yield {"type": "status", "message": "检索质量评估: YES，开始生成回答..."}
+                break
+
+            yield {"type": "status", "message": "检索质量评估: NO"}
+            attempt += 1
+            if attempt >= MAX_RETRIES:
+                break
+
+            yield {"type": "status", "message": f"尝试优化搜索词重试第 {attempt + 1}/{MAX_RETRIES} 次..."}
+            current_query = self._rewrite_question(original_question, current_query, formatted_context)
+            if not current_query:
+                current_query = original_question
+
+        final_for_llm = last_docs or best_docs
+        formatted_context = self.format_docs(final_for_llm)
+
+        response = self._generate_answer(original_question, formatted_context, config_dict)
+        answer_text = getattr(response, "content", None)
+        if answer_text is None and isinstance(response, dict):
+            answer_text = response.get("answer")
+        if answer_text is None:
+            answer_text = str(response)
+        if not passed:
+            answer_text = "基于现有知识库片段，信息可能不够完整，以下是根据相关片段整理的内容：\n\n" + answer_text
+
+        aggregated_docs = list(all_seen.values()) if all_seen else (final_for_llm or [])
+
+        if ("[来源" not in answer_text) and ("来源:" not in answer_text) and aggregated_docs:
             cite_lines = []
-            for i, doc in enumerate(final_docs):
+            for i, doc in enumerate(aggregated_docs):
                 meta = getattr(doc, "metadata", {}) or {}
                 source = meta.get("source") or "未知文件"
                 chunk_id = meta.get("chunk_id")
@@ -130,10 +186,75 @@ class RagService(object):
                 cite_lines.append(f"- [来源: {cite_id}]")
             answer_text = f"{answer_text}\n\n参考来源：\n" + "\n".join(cite_lines)
 
-        return {
+        tm.end_trace(answer_text, passed, attempt + 1)
+        out_dir = os.path.join("logs", "traces")
+        os.makedirs(out_dir, exist_ok=True)
+        tm.dump_async(os.path.join(out_dir, f"trace_{trace_id}.json"))
+
+        yield {
+            "type": "final",
             "answer": answer_text,
-            "context": final_docs 
+            "context": aggregated_docs,
+            "final_context": final_for_llm,
+            "passed": passed,
+            "rounds": attempt + 1,
+            "final_query": current_query,
         }
+
+    def ask_sync(self, question: str, config_dict: dict, use_rerank: bool = False) -> Dict[str, Any]:
+        final_event = None
+        for event in self.ask(question, config_dict, use_rerank=use_rerank):
+            if isinstance(event, dict) and event.get("type") == "final":
+                final_event = event
+        if not final_event:
+            return {"answer": "知识库中未记载相关内容。", "context": []}
+        return {"answer": final_event.get("answer", ""), "context": final_event.get("context", [])}
+
+    @trace_step(
+        name="Grader",
+        round_from=lambda self, question, context: getattr(self, "_current_round", 1),
+        input_fn=lambda self, question, context: {"question": question[:120], "context": context[:200]},
+        output_fn=lambda res: {"verdict": res.get("verdict"), "score": res.get("score"), "reason": (res.get("reason") or "")[:200]},
+    )
+    def _grade_context(self, question: str, context: str) -> Dict[str, Any]:
+        grader_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", "判断【已知信息】是否包含回答【问题】所需的核心事实。只输出YES或NO。"),
+                ("human", "问题：{question}\n\n已知信息：\n{context}\n\n判断："),
+            ]
+        )
+        try:
+            out = (grader_prompt | self.control_llm).invoke({"question": question, "context": context})
+            text = getattr(out, "content", str(out)).strip().upper()
+            verdict = "YES" if "YES" in text else "NO"
+            score = 1.0 if verdict == "YES" else 0.0
+            reason = ""
+            return {"verdict": verdict, "score": score, "reason": reason}
+        except Exception:
+            return {"verdict": "NO", "score": 0.0, "reason": "error"}
+
+    @trace_step(
+        name="Rewriter",
+        round_from=lambda self, original_question, current_query, context: getattr(self, "_current_round", 1),
+        input_fn=lambda self, original_question, current_query, context: {"original_question": original_question[:120], "current_query": current_query[:120]},
+        output_fn=lambda text: {"new_query": text},
+    )
+    def _rewrite_question(self, original_question: str, current_query: str, context: str) -> str:
+        rewriter_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", "把用户问题改写成更适合检索的查询，显式包含关键实体、时间、数值，只输出改写后的问题本身。"),
+                ("human", "原始问题：{original_question}\n当前查询：{current_query}\n已检索到的信息片段：\n{context}\n\n改写后的查询："),
+            ]
+        )
+        try:
+            out = (rewriter_prompt | self.control_llm).invoke(
+                {"original_question": original_question, "current_query": current_query, "context": context}
+            )
+            text = getattr(out, "content", str(out)).strip()
+            text = text.replace("\n", " ").strip()
+            return text[:200]
+        except Exception:
+            return ""
 
     def _ensure_bm25_ready(self) -> None:
         if self._bm25_retriever is not None:
@@ -185,6 +306,21 @@ class RagService(object):
         except Exception:
             self._bm25_retriever = None
 
+    @trace_step(
+        name="Retriever",
+        round_from=lambda self, question, vector_retriever, k: getattr(self, "_current_round", 1),
+        input_fn=lambda self, question, vector_retriever, k: {"query": question, "k": k},
+        output_fn=lambda docs: {
+            "size": len(docs or []),
+            "sources": [
+                (
+                    (getattr(d, "metadata", {}) or {}).get("source"),
+                    (getattr(d, "metadata", {}) or {}).get("chunk_id"),
+                )
+                for d in (docs or [])[:5]
+            ],
+        },
+    )
     def _hybrid_retrieve(self, question: str, vector_retriever, k: int) -> List[Document]:
         vector_docs: List[Document] = []
         try:
@@ -230,6 +366,41 @@ class RagService(object):
         merged = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
         return [by_key[kv[0]] for kv in merged[:k]]
 
+    @trace_step(
+        name="Rerank",
+        round_from=lambda self, docs, question, top_n=3: getattr(self, "_current_round", 1),
+        input_fn=lambda self, docs, question, top_n=3: {"docs": len(docs or []), "top_n": top_n},
+        output_fn=lambda res: {
+            "size": len(res or []),
+            "sources": [
+                (
+                    (getattr(d, "metadata", {}) or {}).get("source"),
+                    (getattr(d, "metadata", {}) or {}).get("chunk_id"),
+                    (getattr(d, "metadata", {}) or {}).get("relevance_score"),
+                )
+                for d in (res or [])[:5]
+            ],
+        },
+    )
+    def _rerank(self, docs: List[Document], question: str, top_n: int = 3) -> List[Document]:
+        try:
+            from langchain_community.document_compressors.dashscope_rerank import DashScopeRerank
+            reranker = DashScopeRerank(model="rerank-v1", top_n=top_n)
+            return reranker.compress_documents(docs, question) or []
+        except Exception:
+            return docs[:top_n]
+
+    @trace_step(
+        name="Generator",
+        round_from=lambda self, question, context, config_dict: getattr(self, "_current_round", 1),
+        input_fn=lambda self, question, context, config_dict: {"question": question[:120], "context": context[:200]},
+        output_fn=lambda res: {"answer": getattr(res, "content", None) or (res.get("answer") if isinstance(res, dict) else None)},
+    )
+    def _generate_answer(self, question: str, context: str, config_dict: dict):
+        return self.chain.invoke(
+            {"question": question, "context": context},
+            config={"configurable": {"session_id": config_dict["session_id"]}},
+        )
     def _try_auto_index(self):
         try:
             from knowledge import KnowledgeBaseService
