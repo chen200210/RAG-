@@ -158,7 +158,9 @@ class RagService(object):
             if not best_docs and last_docs:
                 best_docs = last_docs
 
-            formatted_context = self.format_docs(last_docs)
+            # 上下文精简：保留 Top-3（优先用 relevance_score，否则关键词重合度）
+            compact_docs = self._select_top_docs(original_question, last_docs, top_n=3)
+            formatted_context = self.format_docs(compact_docs)
             yield {"type": "status", "message": "正在评估检索质量..."}
             grade_res = self._grade_context(original_question, formatted_context)
             verdict = (grade_res or {}).get("verdict", "").upper()
@@ -178,7 +180,8 @@ class RagService(object):
                 current_query = original_question
 
         final_for_llm = last_docs or best_docs
-        formatted_context = self.format_docs(final_for_llm)
+        compact_docs = self._select_top_docs(original_question, final_for_llm, top_n=3)
+        formatted_context = self.format_docs(compact_docs)
 
         response = self._generate_answer(original_question, formatted_context, config_dict)
         answer_text = getattr(response, "content", None)
@@ -189,7 +192,11 @@ class RagService(object):
         if not passed:
             answer_text = "基于现有知识库片段，信息可能不够完整，以下是根据相关片段整理的内容：\n\n" + answer_text
 
-        aggregated_docs = list(all_seen.values()) if all_seen else (final_for_llm or [])
+        # 简单流式：将已生成的答案分片推送到前端
+        for i in range(0, len(answer_text), 60):
+            yield {"type": "stream", "delta": answer_text[i:i+60]}
+
+        aggregated_docs = list(all_seen.values()) if all_seen else (compact_docs or final_for_llm or [])
 
         if ("[来源" not in answer_text) and ("来源:" not in answer_text) and aggregated_docs:
             cite_lines = []
@@ -210,7 +217,7 @@ class RagService(object):
             "type": "final",
             "answer": answer_text,
             "context": aggregated_docs,
-            "final_context": final_for_llm,
+            "final_context": compact_docs,
             "passed": passed,
             "rounds": attempt + 1,
             "final_query": current_query,
@@ -446,6 +453,39 @@ class RagService(object):
         except Exception:
             return docs[:top_n]
 
+    def _select_top_docs(self, question: str, docs: List[Document], top_n: int = 3) -> List[Document]:
+        if not docs:
+            return []
+        # 优先用 rerank 分数
+        has_score = any(((getattr(d, "metadata", {}) or {}).get("relevance_score") is not None) for d in docs)
+        if has_score:
+            scored = []
+            for d in docs:
+                s = (getattr(d, "metadata", {}) or {}).get("relevance_score")
+                try:
+                    scored.append((float(s) if s is not None else 0.0, d))
+                except Exception:
+                    scored.append((0.0, d))
+            scored.sort(key=lambda x: x[0], reverse=True)
+            return [d for _, d in scored[:top_n]]
+        # 否则关键词重合度 + 数字/事件词启发式
+        import re as _re
+        q_terms = set(_re.findall(r"[\u4e00-\u9fa5A-Za-z0-9]+", question))
+        number_like = _re.compile(r"\d+|一|二|三|四|五|六|七|八|九|十|百|千|万")
+        ev_set = set(["原因", "目的", "结果", "时间", "地点", "死亡", "送信", "赞助费", "幼儿园"])
+        scored = []
+        for d in docs:
+            text = (getattr(d, "page_content", "") or "")
+            tokens = set(_re.findall(r"[\u4e00-\u9fa5A-Za-z0-9]+", text))
+            overlap = len(q_terms & tokens)
+            bonus = 0
+            if number_like.search(text):
+                bonus += 1
+            if ev_set & tokens:
+                bonus += 1
+            scored.append((overlap + bonus, d))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [d for _, d in scored[:top_n]]
     @trace_step(
         name="Generator",
         round_from=lambda self, question, context, config_dict: getattr(self, "_current_round", 1),

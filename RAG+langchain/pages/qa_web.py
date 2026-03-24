@@ -171,16 +171,25 @@ if prompt := st.chat_input("请输入您的问题...", key="rag_chat_input"):
     # 2. AI 响应容器
     with st.chat_message("assistant"):
         status_box = st.empty()
+        stream_box = st.empty()
+        stream_buf = ""
         res_final = None
 
         for event in st.session_state.rag_service.ask(prompt, session_config, use_rerank=use_rerank):
             if isinstance(event, dict) and event.get("type") == "status":
                 status_box.info(event.get("message", ""))
                 continue
+            if isinstance(event, dict) and event.get("type") == "stream":
+                delta = event.get("delta", "")
+                stream_buf += delta
+                # 直接展示生成中内容（不做富文本处理，保持速度）
+                stream_box.markdown(stream_buf)
+                continue
             if isinstance(event, dict) and event.get("type") == "final":
                 res_final = event
 
         status_box.empty()
+        stream_box.empty()
 
         full_answer = ""
         source_docs = []
