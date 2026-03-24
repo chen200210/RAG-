@@ -450,13 +450,63 @@ class RagService(object):
         name="Generator",
         round_from=lambda self, question, context, config_dict: getattr(self, "_current_round", 1),
         input_fn=lambda self, question, context, config_dict: {"question": question[:120], "context": context[:200]},
-        output_fn=lambda res: {"answer": getattr(res, "content", None) or (res.get("answer") if isinstance(res, dict) else None)},
+        output_fn=lambda res: {
+            "answer": (getattr(res, "content", None) or (res.get("answer") if isinstance(res, dict) else None)),
+            "reasoning_path": (res.get("reasoning_path") if isinstance(res, dict) else None),
+        },
     )
     def _generate_answer(self, question: str, context: str, config_dict: dict):
-        return self.chain.invoke(
+        # 注入 CoT 与常识推理许可的专用 Prompt
+        gen_prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    "你是文学作品阅读理解助手。请先进行简洁、可检查的推理，再给出结论。\n"
+                    "允许在尊重原文事实的基础上进行合理的常识性推理（例如：投毒+倒地不起→可能死亡），"
+                    "但不得与原文事实矛盾。\n"
+                    "输出格式严格分两段：\n"
+                    "推理过程：\n"
+                    "1) 发生的事件 →\n"
+                    "2) 常识背景 →\n"
+                    "3) 逻辑结论 →\n"
+                    "最终回答：<一句话结论>\n"
+                ),
+                (
+                    "human",
+                    "已知上下文：\n{context}\n\n问题：{question}\n\n"
+                    "请先写出“推理过程”，然后给出“最终回答”。",
+                ),
+            ]
+        )
+        out = (gen_prompt | self.llm).invoke(
             {"question": question, "context": context},
             config={"configurable": {"session_id": config_dict["session_id"]}},
         )
+        raw = getattr(out, "content", str(out)) or ""
+        reasoning_path = ""
+        final_answer = raw
+        try:
+            # 粗略解析两段式输出
+            parts = re.split(r"最终回答[:：]\s*", raw, maxsplit=1)
+            if len(parts) == 2:
+                reasoning_path = parts[0].strip()
+                final_answer = parts[1].strip()
+            else:
+                # 退化：尝试截取“推理过程：”块
+                m = re.search(r"(推理过程[:：][\s\S]+)", raw)
+                if m:
+                    reasoning_path = m.group(1).strip()
+        except Exception:
+            pass
+        usage = {}
+        try:
+            usage = getattr(out, "usage_metadata", None) or {}
+            if not usage:
+                rm = getattr(out, "response_metadata", None) or {}
+                usage = rm.get("token_usage") or rm.get("usage") or {}
+        except Exception:
+            usage = {}
+        return {"answer": final_answer, "reasoning_path": reasoning_path, "usage_metadata": usage}
 
     @trace_step(
         name="Router",
